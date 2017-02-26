@@ -1,0 +1,175 @@
+	<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-us" lang="en-us">
+<head>
+  <link href="http://gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <meta name="generator" content="Hugo 0.18.1" />
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+  
+  <title>Kentucky seal generator &middot; eareese dot com</title>
+  
+
+  
+  <link rel="stylesheet" href="http://eareese.github.io/blog/css/poole.css">
+  <link rel="stylesheet" href="http://eareese.github.io/blog/css/syntax.css">
+  <link rel="stylesheet" href="http://eareese.github.io/blog/css/hyde.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=PT+Sans:400,400italic,700|Abril+Fatface">
+
+  
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  
+  <link href="" rel="alternate" type="application/rss+xml" title="eareese dot com" />
+</head>
+
+	<body class=" ">
+		<div class="sidebar">
+  <div class="container sidebar-sticky">
+    <div class="sidebar-about">
+      <a href="http://eareese.github.io/blog/"><h1>eareese dot com</h1></a>
+      <p class="lead">
+       This is some blog. 
+      </p>
+    </div>
+
+    <ul class="sidebar-nav">
+      <li><a href="/">Home</a> </li>
+      
+    </ul>
+
+    <p>&copy; 2017. All rights reserved. </p>
+  </div>
+</div>
+
+
+		<div class="content container">
+			<div class="post">
+			 	<h1>Kentucky seal generator</h1>
+			  <span class="post-date">Sat, Feb 25, 2017</span>
+			      
+
+<p>I made <a href="https://github.com/eareese/uws-dwf">this app</a> which renders a <a href="www.sos.ky.gov/secdesk/history/Pages/Seals.aspx">Seal of the Commonwealth of Kentucky</a> in SVG. The motto can be updated, and the generated Seal can be saved in PNG format. These are my notes on the details of its implementation.</p>
+
+<p>Catch the Kentucky seal generator <a href="https://eareese.github.io/uws-dwf/">here</a>.</p>
+
+<h2 id="thanksvgng">ThankSVGng</h2>
+
+<p>This project really got off the ground when I found this SVG <a href="https://commons.wikimedia.org/wiki/File:Seal_of_Kentucky.svg">Seal of Kentucky</a>. The image is in the public domain, so I downloaded it and removed the original motto text shapes. <a href="https://commons.wikimedia.org/wiki/Category:Thank_you_signs">Thanks</a>, Wikimedia Commons!</p>
+
+<p>Next the SVG gets some new nodes to contain the custom motto. The attributes <code>text-anchor=&quot;middle&quot;</code> and <code>startOffset=&quot;50%&quot;</code> together keep the motto where it should be centered on the paths:</p>
+
+<pre><code class="language-svg">&lt;svg&gt;
+  &lt;defs&gt;
+    &lt;path id=&quot;p1&quot; d=&quot;M 175 331 A 145 145 0 1 1 488 331&quot; /&gt;
+    &lt;path id=&quot;p2&quot; d=&quot;M 168 331 A 132 132 0 1 0 495 331&quot; /&gt;
+  &lt;/defs&gt;
+  &lt;text text-anchor=&quot;middle&quot;&gt;
+    &lt;textPath id=&quot;motto_top&quot; xlink:href=&quot;#p1&quot; startOffset=&quot;50%&quot;&gt;
+      UNITED WE STAND
+    &lt;/textPath&gt;
+  &lt;/text&gt;
+  &lt;text text-anchor=&quot;middle&quot;&gt;
+    &lt;textPath id=&quot;motto_btm&quot; xlink:href=&quot;#p2&quot; startOffset=&quot;50%&quot;&gt;
+      DIVIDED WE FALL
+    &lt;/textPath&gt;
+  &lt;/text&gt;
+&lt;/svg&gt;
+</code></pre>
+
+<p>The other important <code>&lt;textPath&gt;</code> attributes are its <code>id</code>, used by Snap to update the motto contents, and <code>xlink:href</code>, which tells each textPath which path definition to use.</p>
+
+<p>The two <code>&lt;path&gt;</code> elements define arc-shaped paths for the motto to follow, basically two semicircles, as shown below:</p>
+
+<p><img src="/img/example1.png" alt="" /></p>
+
+<h2 id="changing-the-motto">Changing the motto</h2>
+
+<p>Snap.svg will help display the seal and edit its motto. The first task for Snap is to load the blank Seal SVG from an external file. Contents will be added to the empty SVG element on the HTML page with id <code>svg_home</code>:</p>
+
+<pre><code class="language-html">&lt;svg id=&quot;svg_home&quot; width=&quot;100%&quot; height=&quot;100%&quot;
+  viewBox=&quot;0 0 662 662&quot; preserveAspectRatio=&quot;xMinYMin meet&quot;&gt;
+  &lt;!-- contents of the blank seal svg loaded here --&gt;
+&lt;/svg&gt;
+</code></pre>
+
+<pre><code class="language-javascript">Snap.load('seal.svg', function (data) {
+  // call Snap.add(data) on the outer SVG element
+});
+</code></pre>
+
+<p>After the image is loaded, Snap wraps the SVG element and allows the <code>&lt;textPath&gt;</code> nodes to be identified:</p>
+
+<pre><code class="language-javascript">let s = Snap('#svg_home');
+
+let topText = s.select('#motto_top');
+let btmText = s.select('#motto_btm');
+</code></pre>
+
+<p>Finally, the motto can be updated by setting <code>#text</code> attributes with Snap, suitable for wiring to an input event listener function:</p>
+
+<pre><code class="language-javascript">function updateOnInput (topValue, btmValue) {
+  topText.attr({ '#text': topValue });
+  btmText.attr({ '#text': btmValue });
+}
+</code></pre>
+
+<h2 id="save-as">Save as&hellip;</h2>
+
+<p>Setting up the motto live-editing was easy with Snap, but saving the result isn&rsquo;t as straightforward. Even if you get the source of the SVG, it&rsquo;s still in SVG format, which isn&rsquo;t the nicest for viewing and sharing.</p>
+
+<p>Fortunately, we can rely on browser APIs and the <code>SVG.toDataURL</code> and <code>canvg</code> libraries for SVG-to-PNG conversion without external tools or server requests.</p>
+
+<p>When the &lsquo;Get image&rsquo; button is clicked, this code inside the click event callback gets the SVG data, following from the example documentation for <code>SVG.toDataURL</code>:</p>
+
+<pre><code class="language-javascript">sealEl.node.toDataURL('image/png', {
+  callback: function (data) {
+
+    // set the image source to  data  and
+    // do some other stuff to handle display
+    // of the image at this time.
+
+  }
+});
+</code></pre>
+
+<p>Also note that Snap&rsquo;s <code>Element.node</code> is used to identify the seal SVG (in this case, a nested SVG element) and get a reference to the DOM object to convert with <code>toDataURL</code>.</p>
+
+<h2 id="summary">Summary</h2>
+
+<p>Looking back, the <code>uws-dwf</code> app evolved in two main phases:</p>
+
+<ol>
+<li>Prototype of SVG-changing with Snap to check how easy it would be (result: very, after figuring out textPath drawing)
+
+<ul>
+<li>result: easy indeed, once you know how and where to draw the paths</li>
+</ul></li>
+<li>Integrating other libraries to handle PNG conversion</li>
+</ol>
+
+<p>Not much to it after finding those other parts to do the heavy lifting, but #simplegifts</p>
+
+<h2 id="links-and-resources">Links and resources</h2>
+
+<ul>
+<li><p><a href="developer.mozilla.org/en-US/docs/Web/SVG/Element/textPath">MDN: <code>&lt;textPath&gt;</code> element reference</a></p></li>
+
+<li><p><a href="snapsvg.io">Snap.svg</a></p></li>
+
+<li><p><a href="https://github.com/sampumon/SVG.toDataURL">SVG.toDataURL</a></p></li>
+
+<li><p><a href="https://eareese.github.io/uws-dwf/">Kentucky Seal generator</a>
+(<a href="https://github.com/eareese/uws-dwf/">source on GitHub</a>)</p></li>
+</ul>
+
+			</div>
+
+			
+		</div>
+
+  </body>
+</html>

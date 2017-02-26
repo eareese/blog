@@ -1,6 +1,6 @@
 languageCode = "en-us"
 title = "eareese dot com"
-baseurl = "http://blog.eareese.com"
+baseurl = "http://eareese.github.io/blog/"
 theme = "hyde"
 
 [params]

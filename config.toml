@@ -1,0 +1,8 @@
+languageCode = "en-us"
+title = "eareese dot com"
+baseurl = "http://blog.eareese.com"
+theme = "hyde"
+
+[params]
+  description = "This is some blog."
+  author = "Emily Reese"
